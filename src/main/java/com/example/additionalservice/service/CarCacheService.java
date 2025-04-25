@@ -26,8 +26,9 @@ public class CarCacheService {
         return carCache.computeIfAbsent(id, carClient::getCarById);  // сразу погружаем авто в кэш, если его там нет
     }
 
-    public void putCar(Car car) {  // вручную добавить машину в кеш
-        if (car != null) {
+    public void cacheCar(Car car) {  // вручную добавить машину в кеш
+        if (car != null && !carCache.containsKey(car.getId())) {
+            System.out.println("[Car Cache] Caching car: " + car.getId());
             carCache.putIfAbsent(car.getId(), car);
         }
     }

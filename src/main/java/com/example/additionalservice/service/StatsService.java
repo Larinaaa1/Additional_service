@@ -30,35 +30,70 @@ public class StatsService {
         }
 
         // Получаем все аренды
-        List<Rental> allRentals = Optional.ofNullable(rentalClient.getAllRentals()).orElse(Collections.emptyList());
+        List<Rental> allRentals = Optional.ofNullable(rentalClient.getAllRentals())
+                .orElse(Collections.emptyList());
 
-        // Группируем аренды по ID машины
-        Map<Long, List<Rental>> rentalsByCarId = allRentals.stream()
+        // Получаем ID машин из аренд
+        Set<Long> carIdsFromRentals = allRentals.stream()
                 .filter(r -> r.getCar() != null)
-                .collect(Collectors.groupingBy(r -> r.getCar().getId()));
+                .map(r -> r.getCar().getId())
+                .collect(Collectors.toSet());
 
-        // Получаем ID всех машин в городе
-        List<Long> carIdsInCity = carClient.getCarsByCity(city).stream()
-                .map(Car::getId)
-                .collect(Collectors.toList());
+        // Сначала загружаем машины из аренд
+        List<Car> carsToCheck = new ArrayList<>();
 
-        List<CarDTO> result = new ArrayList<>();
-
-        for (Long carId : carIdsInCity) {
+        for (Long carId : carIdsFromRentals) {
             Car car = carCacheService.getCarById(carId);
-            if (car == null || !city.equalsIgnoreCase(car.getCity())) {
-                continue;                                                  // пропускаем, если машина не найдена или из другого города
-            }
-
-            List<Rental> carRentals = rentalsByCarId.getOrDefault(carId, Collections.emptyList());
-
-            if (isAvailable(carRentals, startDate, endDate)) {
-                result.add(convertToCarDTO(car));
+            if (car == null) {
+                car = carClient.getCarById(carId);
+                if (car != null) {
+                    carCacheService.cacheCar(car);
+                    carsToCheck.add(car);
+                }
+            } else {
+                carsToCheck.add(car);
             }
         }
 
-        return result;
+        // Теперь загружаем все машины
+        List<Car> allCars = Optional.ofNullable(carClient.getAllCars()).orElse(Collections.emptyList());
+
+        for (Car car : allCars) {
+            if (!carCacheService.isCarCached(car.getId())) {
+                carCacheService.cacheCar(car);
+            }
+
+            // Добавляем в список, если её ещё нет (избегаем дублей)
+            if (!carIdsFromRentals.contains(car.getId())) {
+                carsToCheck.add(car);
+            }
+        }
+
+        // Фильтрация по городу
+        List<Car> filteredByCity = carsToCheck.stream()
+                .filter(car -> city.trim().equalsIgnoreCase(car.getCity().trim()))
+                .toList();
+
+        // Группировка аренд по машинам
+        Set<Long> filteredCarIds = filteredByCity.stream()
+                .map(Car::getId)
+                .collect(Collectors.toSet());
+
+        Map<Long, List<Rental>> rentalsByCarId = allRentals.stream()
+                .filter(r -> r.getCar() != null && filteredCarIds.contains(r.getCar().getId()))
+                .collect(Collectors.groupingBy(r -> r.getCar().getId()));
+
+        // Фильтрация по доступности
+        return filteredByCity.stream()
+                .filter(car -> {
+                    List<Rental> carRentals = rentalsByCarId.getOrDefault(car.getId(), Collections.emptyList());
+                    return isAvailable(carRentals, startDate, endDate);
+                })
+                .map(this::convertToCarDTO)
+                .collect(Collectors.toList());
     }
+
+
 
     private boolean isAvailable(List<Rental> rentals, LocalDate startDate, LocalDate endDate) {
         return rentals.stream().noneMatch(rental ->
