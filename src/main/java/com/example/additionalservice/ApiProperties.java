@@ -1,17 +1,18 @@
 package com.example.additionalservice;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Bean;
 
 @Configuration
-@ConfigurationProperties(prefix = "external.api")
 public class ApiProperties {
-    private String baseUrl;
 
+    @Value("${core.service.host}")
+    private String coreServiceHost;
+
+    @Value("${core.service.port}")
+    private String coreServicePort;
     public String getBaseUrl() {
-        return baseUrl;
-    }
-
-    public void setBaseUrl(String baseUrl) {
-        this.baseUrl = baseUrl;
+        return "http://" + coreServiceHost + ":" + coreServicePort;
     }
 }

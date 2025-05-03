@@ -1,5 +1,6 @@
 package com.example.additionalservice.service.clients;
 
+import com.example.additionalservice.ApiProperties;
 import com.example.additionalservice.model.Rental;
 import com.example.additionalservice.service.statistics.Obility2;
 import dto.CarDTO;
@@ -15,18 +16,18 @@ import java.time.LocalDate;
 public class RentalClient {
 
     private final RestTemplate restTemplate;
-    private final String baseUrl;
+    private final ApiProperties apiProperties;
 
-    public RentalClient(RestTemplate restTemplate,
-                        @Value("${main.service.url}") String baseUrl) {
+    public RentalClient(RestTemplate restTemplate
+                       , ApiProperties apiProperties) {
         this.restTemplate = restTemplate;
-        this.baseUrl = baseUrl;
+        this.apiProperties = apiProperties;
     }
 
     public List<Rental> getAllRentals() {
         long start = System.currentTimeMillis();
         try {
-            String url = baseUrl + "/rentals";
+            String url = apiProperties.getBaseUrl() + "/rentals";
             Rental[] rentals = restTemplate.getForObject(url, Rental[].class);
             List<Rental> temp = rentals != null ? Arrays.asList(rentals) : List.of();
             return temp;
@@ -40,7 +41,7 @@ public class RentalClient {
     public List<Rental> getRentalsByCarId(Long carId) {
         long start = System.currentTimeMillis();
         try {
-            String url = baseUrl + "/rentals/car/" + carId;
+            String url = apiProperties.getBaseUrl() + "/rentals/car/" + carId;
             Rental[] rentals = restTemplate.getForObject(url, Rental[].class);
             List<Rental> temp = rentals != null ? Arrays.asList(rentals) : List.of();
             return temp;
@@ -55,7 +56,7 @@ public class RentalClient {
         long start = System.currentTimeMillis();
         try {
             String url = String.format("%s/rentals/overlapping?startDate=%s&endDate=%s",
-                    baseUrl, startDate, endDate);
+                    apiProperties.getBaseUrl(), startDate, endDate);
             Rental[] rentals = restTemplate.getForObject(url, Rental[].class);
             List<Rental> temp = rentals != null ? Arrays.asList(rentals) : List.of();
             return temp;

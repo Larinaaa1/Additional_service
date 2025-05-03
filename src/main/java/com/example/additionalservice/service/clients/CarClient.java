@@ -23,13 +23,11 @@ public class CarClient {
         this.apiProperties = apiProperties;
     }
 
-    @Value("${main.service.url}")
-    private String baseUrl;
 
     public List<Car> getAllCars() {
         long start = System.currentTimeMillis();
         try {
-            String url = baseUrl + "/cars";
+            String url = apiProperties.getBaseUrl() + "/cars";
             Car[] cars = restTemplate.getForObject(url, Car[].class);
             List<Car> temp = cars != null ? Arrays.asList(cars) : List.of();
             return temp;
@@ -43,7 +41,7 @@ public class CarClient {
     public Car getCarById(Long id) {
         long start = System.currentTimeMillis();
         try {
-            String url = baseUrl + "/cars/" + id;
+            String url = apiProperties.getBaseUrl() + "/cars/" + id;
             Car temp = restTemplate.getForObject(url, Car.class);
             return temp;
         }
@@ -56,7 +54,7 @@ public class CarClient {
     public List<Car> getCarsByCity(String city) {
         long start = System.currentTimeMillis();
         try {
-            String url = baseUrl + "/cars?city=" + city;
+            String url = apiProperties.getBaseUrl() + "/cars?city=" + city;
             Car[] cars = restTemplate.getForObject(url, Car[].class);
             List<Car> temp = cars != null ? Arrays.asList(cars) : List.of();
             return temp;
